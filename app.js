@@ -6,9 +6,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     let datasetDescriptors = [];
 
     const SALESFORCE_INSTANCE_URL = "https://anthea2-dev-ed.develop.my.salesforce.com";
-    const SALESFORCE_USERNAME = "shree@shreenijha.sandbox";
-    const SALESFORCE_PASSWORD = "Stagency@123";
     const SALESFORCE_SECURITY_TOKEN = "NmdXtcC2SRTCnV0gdQrQxD5I";
+
+    const SALESFORCE_OBJECT_NAME = "Driver_Verification__c"; // Object API Name
+    const FIELD_STATUS = "Status__c"; // Field for storing authorization status
+    const FIELD_IMAGE = "Driver_Image__c"; // Field for storing input image
 
     // Load BlazeFace model
     const loadModel = async () => {
@@ -112,12 +114,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     const pushToSalesforce = async (verificationResult, inputImageBlob) => {
         try {
             const data = {
-                Status__c: verificationResult,
-                Driver_Image__c: `data:image/jpeg;base64,${await blobToBase64(inputImageBlob)}`,
+                [FIELD_STATUS]: verificationResult, // Mapping status field
+                [FIELD_IMAGE]: `data:image/jpeg;base64,${await blobToBase64(inputImageBlob)}`, // Mapping image field
             };
 
             const response = await fetch(
-                `${SALESFORCE_INSTANCE_URL}/services/data/v55.0/sobjects/Driver_Verification__c`,
+                `${SALESFORCE_INSTANCE_URL}/services/data/v55.0/sobjects/${SALESFORCE_OBJECT_NAME}`,
                 {
                     method: "POST",
                     headers: {
@@ -132,8 +134,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error("Salesforce Record Creation Error:", errorText);
-
-                // Adding more descriptive error handling
                 throw new Error(`HTTP ${response.status}: ${errorText}`);
             }
 
@@ -143,19 +143,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             status.innerText = `Record successfully created in Salesforce with ID: ${result.id}`;
             status.className = "success";
         } catch (error) {
-            // Enhanced error logging for debugging
             console.error("Error pushing data to Salesforce:", error);
-
-            if (error.message.includes('401')) {
-                console.error("Unauthorized: Check your Bearer token.");
-            } else if (error.message.includes('403')) {
-                console.error("Forbidden: Check your API user permissions.");
-            } else if (error.message.includes('404')) {
-                console.error("Not Found: Check the Salesforce endpoint URL.");
-            } else {
-                console.error("Unknown error occurred.");
-            }
-
             status.innerText = "Failed to create record in Salesforce. Check console for details.";
             status.className = "error";
         }
